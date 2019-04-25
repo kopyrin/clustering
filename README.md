@@ -52,4 +52,5 @@ vfp9r.dll
 VFP9RENU.DLL
 vfp9t.dll
 
+Эти файлы можно взять из проекта "Энциклопедия о Высоцком В.С." https://github.com/kopyrin/Encyclopedia_of_Vysotsky
 Файлы *.dll можно поместить в каталог указанный в переменной PATH ОС Windows и использовать 1 копию для всех проектов

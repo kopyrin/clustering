@@ -39,11 +39,11 @@ IF oClasters.append_data()
     ***** разбиваем ключи на слова
     SELECT clasters
     SET ORDER TO
-    m.nReccount = STR(RECCOUNT())
+    m.nReccount = RECCOUNT()
 
     * первый проход - разбивка на слова
     SCAN all
-        WAIT windows NOWAIT "Разбивка ключа на слова. Запись - " + STR(RECNO()) + " из " + m.nReccount
+        WAIT windows NOWAIT "Разбивка ключа на слова. " + ALLTRIM(STR((RECNO()*100)/m.nReccount)) + " % "
         oClasters.key       = clasters.key
         oClasters.frequency = clasters.frequency
         oClasters.count = 0
@@ -122,11 +122,11 @@ IF oClasters.append_data()
     oWords.create()
 
     SELECT words
-    m.nReccount = STR(RECCOUNT())
+    m.nReccount = RECCOUNT()
 
     * ищем леммы для слов
     SCAN all
-        WAIT windows NOWAIT "Ищем леммы для слов в словаре. Запись - " + STR(RECNO()) + " из " + m.nReccount
+        WAIT windows NOWAIT "Ищем леммы для слов в словаре. " + ALLTRIM(STR((RECNO()*100)/m.nReccount)) + " % "
         oWords.words = words.words
         oWords.lemma = oDicLemms.SearchByWord(oWords.words)
         replace words.lemma WITH oWords.lemma
@@ -153,11 +153,11 @@ IF oClasters.append_data()
     DECLARE aStatus [7]
     SELECT clasters
     SET ORDER TO
-    m.nReccount = STR(RECCOUNT())
+    m.nReccount = RECCOUNT()
     SCAN all
         oClasters.scatter_data()
         oClasters.wes = ""
-        WAIT windows NOWAIT "Собираем слова в кластеры Запись - " + STR(RECNO()) + " из " + m.nReccount
+        WAIT windows NOWAIT "Собираем слова в кластеры. " + ALLTRIM(STR((RECNO()*100)/m.nReccount)) + " % "
     
         aStatus[1] = oClasters.setStatus(oClasters.w1)
         aStatus[2] = oClasters.setStatus(oClasters.w2)
@@ -460,13 +460,14 @@ DEFINE CLASS _clasters as Custom
         FFLUSH(m.nFile)
 
         IF FILE('clasters-short.txt')  && Файл существует? 
+
+            * стираем его
             IF FILE("clasters-short.txt")
                 ERASE clasters-short.txt
             ENDIF
-           m.nFile = FCREATE('clasters-short.txt')  && Если нет, создаем его
-        ELSE
-           m.nFile = FCREATE('clasters-short.txt')  && Если нет, создаем его
         ENDIF
+        m.nFile = FCREATE('clasters-short.txt')  && создаем его
+        
         IF m.nFile < 0  && Проверка наличия ошибок открытия или создания файла
            WAIT 'Невозможно открыть или создать файл' WINDOW NOWAIT
         ELSE  && Если нет ошибки, запись в файл
@@ -488,13 +489,12 @@ DEFINE CLASS _clasters as Custom
         FFLUSH(m.nFile)
         
         IF FILE('clasters-minus.txt')  && Файл существует? 
+            * стираем его 
             IF FILE("clasters-minus.txt")
                 ERASE clasters-minus.txt
             ENDIF
-           m.nFile = FCREATE('clasters-minus.txt')  && Если нет, создаем его
-        ELSE
-           m.nFile = FCREATE('clasters-minus.txt')  && Если нет, создаем его
         ENDIF
+        m.nFile = FCREATE('clasters-minus.txt')  && Если нет, создаем его
         IF m.nFile < 0  && Проверка наличия ошибок открытия или создания файла
            WAIT 'Невозможно открыть или создать файл' WINDOW NOWAIT
         ELSE  && Если нет ошибки, запись в файл
@@ -519,13 +519,13 @@ DEFINE CLASS _clasters as Custom
     FUNCTION SetColor
         SELECT clasters
         SET ORDER TO wes
-        m.nReccount = STR(RECCOUNT())
+        m.nReccount = RECCOUNT()
         m.nCountRec = 0
         m.cWes = ""
 
         SCAN all
             m.nCountRec = m.nCountRec + 1
-            WAIT windows NOWAIT "Ищем вершины кластеров Запись - " + STR(m.nCountRec) + " из " + m.nReccount
+            WAIT windows NOWAIT "Ищем вершины кластеров " + ALLTRIM(STR((RECNO()*100)/m.nReccount))
             IF m.cWes == Clasters.Wes
                 replace clasters.color WITH .f.
             ELSE

@@ -5,9 +5,8 @@ SET SAFETY OFF
 SET STATUS OFF
 
 CLEAR
+? "Шаг 1. Открываем таблицы." 
 ? TIME()
-
-WAIT windows NOWAIT "Шаг 1. Открываем таблицы"
 
 **** справочник лемм ***
 oDiclemms = CREATEOBJECT("_diclemms")
@@ -28,7 +27,8 @@ oMinus.open()
 oClasters = CREATEOBJECT("_clasters")
 oClasters.open()
 
-WAIT windows NOWAIT "Шаг 2. Добавляем данные из текстовых файлов"
+? "Шаг 2. Добавляем данные из текстовых файлов"
+? TIME()
 
 oPretext.append_data()
 oMinus.append_data()
@@ -37,7 +37,8 @@ IF oClasters.append_data()
 
 
     * собираем словарь слов
-    WAIT windows NOWAIT "Шаг 3.Собираем словарь слов с 1) леммой 2) числом максимальной частотности"
+    ? "Шаг 4.Собираем словарь слов с 1) леммой 2) числом максимальной частотности"
+    ? TIME()
     oWords.create()
 
     SELECT words
@@ -50,17 +51,15 @@ IF oClasters.append_data()
     
     m.nReccount = RECCOUNT()
     m.cWords = ""
-    
+    ? "Шаг 4. Собираем слова в кластеры. "
+    ? TIME()
     SCAN all
         SCATTER NAME oClasters
-        IF EMPTY(oClasters.w1+oClasters.w2+Clasters.w3+oClasters.w4+oClasters.w5+oClasters.w6+oClasters.w7)
-            LOOP
-        endif
         oClasters.wes = ""
-        WAIT windows NOWAIT "Шаг 4. Собираем слова в кластеры. " + ALLTRIM(STR((RECNO()*100)/m.nReccount)) + " % "
+
+        WAIT windows NOWAIT "% выполнения " + ALLTRIM(STR((RECNO()*100)/m.nReccount))
         * ищем для каждого слова частотность + само слово
-        SELECT words
-        SET ORDER TO words 
+
         FOR countStatus = 1  TO 7
             DO CASE 
                 CASE countStatus = 1 
@@ -84,6 +83,7 @@ IF oClasters.append_data()
             IF EMPTY(cWords)
                 LOOP
             ENDIF
+            SELECT words
             IF SEEK(m.cWords)
                 aStatus[countStatus] = STR(words.frequency) + words.lemma
             endif
@@ -102,7 +102,7 @@ IF oClasters.append_data()
         FOR m.nCount = 1 TO 7
             IF NOT EMPTY(aStatus[m.nCount])
                 * возвращаем слово из массива
-                m.cW   = ALLTRIM(SUBSTR(aStatus[m.nCount],11,30))+ " "
+                m.cW   = ALLTRIM(SUBSTR(aStatus[m.nCount],11,40))+ " "
                 * возвращаем частотность из массива
                 m.cWes = VAL(SUBSTR(aStatus[m.nCount],1,10))
             ELSE
@@ -132,20 +132,21 @@ IF oClasters.append_data()
                     oClasters.w7 = m.cW
                     oClasters.l7_max = m.cWes
             ENDCASE
-            oClasters.wes = oClasters.wes+CHR(9)+m.cW +CHR(9)+IIF(m.cWes>0,ALLTRIM(STR(m.cWes)),"0")
+            oClasters.wes = oClasters.wes+CHR(9)+m.cW +CHR(9)+IIF(m.cWes>0,ALLTRIM(STR(m.cWes)),"")
         ENDFOR
         SELECT clasters
         GATHER name oClasters
     ENDSCAN
 
 
-    WAIT windows NOWAIT "Шаг 5 Выгружаем данные clasters"
+    ? "Шаг 5 Выгружаем данные clasters в файл"
+    ? TIME()
+    
     IF FILE("clasters.txt-old")
         ERASE clasters.txt-old
     ENDIF
     RENAME clasters.txt TO clasters.txt-old
     SELECT clasters
-    SET ORDER TO WES
     IF FILE('clasters-long.txt')  && Файл существует?
         IF FILE("clasters-long.txt")
             ERASE clasters-long.txt
@@ -157,9 +158,25 @@ IF oClasters.append_data()
     IF m.nFile < 0  && Проверка наличия ошибок открытия или создания файла
        WAIT 'Невозможно открыть или создать файл' WINDOW NOWAIT
     ELSE  && Если нет ошибки, запись в файл
-        SCAN ALL FOR NOT EMPTY(w1+w2+w3+w4+w5+w6+w7) AND frequency > 9
+        SELECT *;
+            FROM clasters;
+            ORDER BY l1_max desc,;
+                     l2_max desc,;
+                     l3_max desc,;
+                     l4_max desc,;
+                     l5_max desc,;
+                     l6_max desc,;
+                     l7_max desc;
+            INTO CURSOR clasters_cur
+            
+            SELECT clasters_cur
+            
+        SCAN ALL FOR frequency > 9
+            * запрос
             m.cWord = ALLTRIM(key) + CHR(9)
+            * частотность
             m.cWord = m.cWord + ALLTRIM(str(frequency)) + CHR(9)
+            * леммы
             m.cWord = m.cWord + ALLTRIM(w1)
             m.cWord = m.cWord + IIF(not EMPTY(w2)," " + ALLTRIM(w2),"")
             m.cWord = m.cWord + IIF(not EMPTY(w3)," " + ALLTRIM(w3),"")
@@ -175,90 +192,61 @@ IF oClasters.append_data()
     =FCLOSE(m.nFile)  && Закрываем файл
     FFLUSH(m.nFile)
 
-    IF FILE('clasters-short.txt')  && Файл существует?
-
-        * стираем его
-        IF FILE("clasters-short.txt")
-            ERASE clasters-short.txt
-        ENDIF
-    ENDIF
-    m.nFile = FCREATE('clasters-short.txt')  && создаем его
-
-    IF m.nFile < 0  && Проверка наличия ошибок открытия или создания файла
-       WAIT 'Невозможно открыть или создать файл' WINDOW NOWAIT
-    ELSE  && Если нет ошибки, запись в файл
-        SCAN ALL FOR color  AND frequency > 9
-            m.cWord =           ALLTRIM(key) + CHR(9)
-            m.cWord = m.cWord + ALLTRIM(str(frequency)) + CHR(9)
-            m.cWord = m.cWord + ALLTRIM(w1)
-            m.cWord = m.cWord + IIF(not EMPTY(w2)," " + ALLTRIM(w2),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w3)," " + ALLTRIM(w3),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w4)," " + ALLTRIM(w4),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w5)," " + ALLTRIM(w5),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w6)," " + ALLTRIM(w6),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w7)," " + ALLTRIM(w7),"") + CHR(9)
-            m.cWord = m.cWord + str(l1_max)+ CHR(9)
-            m.cWord = m.cWord + str(l2_max)+ CHR(9)
-            m.cWord = m.cWord + str(l3_max)+ CHR(9)
-            m.cWord = m.cWord + str(l4_max)+ CHR(9)
-            m.cWord = m.cWord + str(l5_max)+ CHR(9)
-            m.cWord = m.cWord + str(l6_max)+ CHR(9)
-            m.cWord = m.cWord + str(l7_max)+ CHR(9)
-            m.cWord = m.cWord + ALLTRIM(Wes)
-            m.cWord = m.cWord + CHR(13)+ CHR(10)
-           =FWRITE(m.nFile, m.cWord )
-        ENDSCAN
-    ENDIF
-    =FCLOSE(m.nFile)  && Закрываем файл
-    FFLUSH(m.nFile)
-
-    IF FILE('clasters-minus.txt')  && Файл существует?
-        * стираем его
-        IF FILE("clasters-minus.txt")
-            ERASE clasters-minus.txt
-        ENDIF
-    ENDIF
-    m.nFile = FCREATE('clasters-minus.txt')  && Если нет, создаем его
-    IF m.nFile < 0  && Проверка наличия ошибок открытия или создания файла
-       WAIT 'Невозможно открыть или создать файл' WINDOW NOWAIT
-    ELSE  && Если нет ошибки, запись в файл
-        SCAN ALL FOR EMPTY(w1+w2+w3+w4+w5+w6+w7)
-            m.cWord = ALLTRIM(key) + CHR(9)
-            m.cWord = m.cWord + ALLTRIM(str(frequency)) + CHR(9)
-            m.cWord = m.cWord + ALLTRIM(w1)
-            m.cWord = m.cWord + IIF(not EMPTY(w2)," " + ALLTRIM(w2),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w3)," " + ALLTRIM(w3),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w4)," " + ALLTRIM(w4),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w5)," " + ALLTRIM(w5),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w6)," " + ALLTRIM(w6),"")
-            m.cWord = m.cWord + IIF(not EMPTY(w7)," " + ALLTRIM(w7),"")
-            m.cWord = m.cWord + CHR(13)+ CHR(10)
-           =FWRITE(m.nFile, m.cWord )
-        ENDSCAN
-    ENDIF
-    =FCLOSE(m.nFile)  && Закрываем файл
-    FFLUSH(m.nFile)
+    IF USED("clasters_cur")
+        USE IN clasters_cur
+    ENDIF 
     
-    WAIT windows NOWAIT "Шаг 5. Выгружаем данные words"
+    ? "Шаг 6. Выгружаем данные words в файл"
+    ? TIME()
     SELECT words
-    SET ORDER TO frequency desc
+    SET ORDER TO frequency ASCENDING
     copy TO words.txt DELIMITED WITH TAB FIELDS words, frequency FOR NOT EMPTY(words)
+    
 
 
 ENDIF
 
-
-WAIT windows NOWAIT "Шаг 6. Готово!"
+? "Закрываем таблицы"
 ? TIME()
 
-** oClasters.close()
-*  oClasters.view()
-oWords.close()
-oPretext.close()
-oMinus.close()
+IF USED('clasters')
+    USE IN clasters
+endif
+IF FILE('clasters.dbf')
+    ERASE clasters.dbf
+    ERASE clasters.cdx
+ENDIF
 
-oDicLemms.close()
+IF USED('words')
+    USE IN words
+endif
+IF FILE('words.dbf')
+    ERASE words.dbf
+    ERASE words.cdx
+ENDIF
 
+IF USED('pretext')
+    USE IN pretext
+endif
+IF FILE('pretext.dbf')
+    ERASE pretext.dbf
+    ERASE pretext.cdx
+endif
+
+IF USED('minus')
+    USE IN minus
+endif
+IF FILE('minus.dbf')
+    ERASE minus.dbf
+    ERASE minus.cdx
+endif
+
+IF USED("diclemms")
+    USE IN diclemms
+endif
+
+? "Закончили"
+? TIME()
 
 ******************************
 *  класс _diclemms
@@ -274,11 +262,9 @@ DEFINE CLASS _diclemms as Custom
             SELECT 0
             USE diclemms.dbf
         ELSE
-
             CREATE TABLE diclemms FREE  ;
                (word  C(30),;
                 lemma C(30))
-
             INDEX ON word TAG word
             INDEX ON lemma TAG lemma
         ENDIF
@@ -286,7 +272,8 @@ DEFINE CLASS _diclemms as Custom
         IF FILE('diclemms.txt')
             SELECT diclemms
             ZAP
-            WAIT windows NOWAIT "Добавление данных из файла diclemms.txt"
+            ? "Добавление данных из файла diclemms.txt"
+            ? TIME()
             APPEND FROM diclemms.txt FIELDS word, lemma DELIMITED WITH TAB
             IF FILE("diclemms.txt-old")
                 ERASE diclemms.txt-old
@@ -299,34 +286,20 @@ DEFINE CLASS _diclemms as Custom
     FUNCTION SearchByWord(m.cWord)
         IF LEN(m.cWord) < 29
             m.cWord = m.cWord + SPACE(30-LEN(m.cWord))
-        endif
+        ENDIF
+        
         SELECT diclemms
         SET ORDER TO word
-        SEEK(m.cWord)
-        IF FOUND()
-            IF EMPTY(diclemms.lemma)
-                RETURN m.cWord
-            ELSE
-                return diclemms.lemma
-            endif
+        IF SEEK(m.cWord)
+            RETURN IIF( EMPTY(diclemms.lemma), m.cWord, diclemms.lemma)
         ELSE
-            INSERT INTO diclemms(word) VALUES (m.cWord)
+            INSERT INTO diclemms(word, lemma) VALUES (m.cWord, m.cWord)
             RETURN m.cWord
         ENDIF
     ENDFUNC
 
 
-    FUNCTION View
-        SELECT diclemms
-        SET ORDER TO word
-        GO top
-        BROWSE LAST FIELDS word :H = 'Слово',;
-                           lemma :H = 'Лемма' ;
-        TITLE 'Словарь лемм' NOWAIT
-    ENDFUNC
 
-    FUNCTION close
-        USE IN diclemms
 
 ENDDEFINE
 
@@ -399,14 +372,6 @@ DEFINE CLASS _clasters as Custom
 
     ENDFUNC
 
-    FUNCTION close
-        USE IN clasters
-*!*            IF FILE('clasters.dbf')
-*!*                ERASE clasters.dbf
-*!*                ERASE clasters.cdx
-*!*            endif
-
-    ENDFUNC
 
     ***** добавляем данные из файла
     FUNCTION append_data
@@ -422,11 +387,15 @@ DEFINE CLASS _clasters as Custom
                 RETURN
             ENDIF
             lnStroka = 0
+
+            ? "Добавляем данные из файла clasters.txt"
+            ? TIME()
+            
             * Читаем до конца
             DO WHILE NOT FEOF(nHandle)
                 lcLine = FGETS(nHandle)   && читает одну строку (включая символы конца строки)
                 lnStroka = lnStroka +1
-                WAIT windows NOWAIT "Шаг 3. Разбивка ключа на слова. Строка № " +STR( lnStroka )
+                WAIT windows NOWAIT  "Строка № " +STR( lnStroka )
                 IF VARTYPE(lcLine) = "C"
                     lcLine = RTRIM(lcLine)  && убираем завершающие пробелы и символы конца строки
                     * — здесь можно обработать lcLine
@@ -445,7 +414,7 @@ DEFINE CLASS _clasters as Custom
 
                     ***** разбиваем ключи на слова
 
-                    * WAIT windows NOWAIT "Шаг 4. Разбивка ключа на слова. "
+                    * WAIT windows NOWAIT "Шаг 3. Разбивка ключа на слова. "
                     oClasters.key       = laFields[1]
                     oClasters.frequency = VAL(laFields[2])
                     oClasters.count = 0
@@ -463,18 +432,17 @@ DEFINE CLASS _clasters as Custom
                     oClasters.l6 = ""
                     oClasters.w7 = ""
                     oClasters.l7 = ""
-                    m.lZapret = .f.
+                    m.lZapret    = .f.
                     m.nL = 0
                     * количество слов в запросе
                     oClasters.count = GETWORDCOUNT(oClasters.key,' ')
-
 
                     FOR m.nCount =1 TO oClasters.count
                         * получаем слово
                         m.cWord = GETWORDNUM(oClasters.key, m.nCount, ' ')
                         * если слово существуе
                         IF NOT EMPTY(m.cWord)
-                            * ищем в таблице минус слов слово
+                            * ищем в таблице минус слов слово (точное совпаде
                             * если находим то выходим из цикла
                             IF oMinus.seek_word(m.cWord)
                                 SELECT clasters
@@ -530,37 +498,11 @@ DEFINE CLASS _clasters as Custom
             =FCLOSE(nHandle)
             RETURN  .t.
         ELSE
+            ? "файл clasters.txt отсуствует" 
             RETURN .f.
         endif
     ENDFUNC
 
-
-    FUNCTION Exports
-
-    ENDFUNC
-
-
-    FUNCTION View
-        SELECT clasters
-        SET ORDER TO group
-
-        GO top
-        BROWSE FIELDS key                                                :H = 'Запрос',;
-                      group=ALLTRIM(w1)+" "+ALLTRIM(w2)+" "+ALLTRIM(w3)+" "+ALLTRIM(w4)+" "+ALLTRIM(w5)+" "+ALLTRIM(w6)+" "+ALLTRIM(w7) :H = 'Кластер',;
-                      frequency :H = 'Частность';
-        TITLE 'Кластеры' noedit NOWAIT name clastersBrowse
-
-        with clastersBrowse
-            .deletemark = .f.
-            .highlightrow = .t.
-            .backcolor = rgb(255,255,255)
-            .column1.DynamicBackColor = "IIF(color = .t., RGB(255,255,0), RGB(255,255,255))"
-            .column2.DynamicBackColor = "IIF(color = .t., RGB(255,255,0), RGB(255,255,255))"
-            .column3.DynamicBackColor = "IIF(color = .t., RGB(255,255,0), RGB(255,255,255))"
-            .refresh()
-        endwith
-
-    ENDFUNC
 
 ENDDEFINE
 
@@ -576,7 +518,9 @@ DEFINE CLASS _words as Custom
     count_lemm = 0
 
     FUNCTION create
-        WAIT windows NOWAIT "Собираем словарь слов "
+        ? "Собираем словарь слов из запросов"
+        ? TIME()
+        
         SELECT Clasters.w1 as words,;
                Clasters.l1 as l,;
               MAX(Clasters.frequency) AS frequency,;
@@ -657,142 +601,9 @@ DEFINE CLASS _words as Custom
 
     ENDFUNC
 
-    FUNCTION close
-        IF USED('words')
-            USE IN words
-        endif
-*!*         IF FILE('words.dbf')
-*!*             ERASE words.dbf
-*!*             ERASE words.cdx
-*!*         endif
-    ENDFUNC
-
-
-    FUNCTION Export
-
-    ENDFUNC
-
 
 ENDDEFINE
 
-******************************
-*  класс _lemmas
-******************************
-DEFINE CLASS _lemmas as Custom
-
-    lemma = ""
-    count_lemm = 0
-    frec_lemm = 0
-    weight = 0
-    status = 0
-    frequency = 0
-
-    FUNCTION create
-        SELECT Words.lemma as lemma, ;
-           Words.share as weight,;
-           000000000 as status,;
-           Words.frequency as frequency;
-         FROM words;
-         ORDER by 2 desc;
-         INTO TABLE lemmas.dbf
-
-         INDEX ON lemma TAG lemma
-         INDEX ON weight TAG weight
-         INDEX ON status TAG status
-         SET ORDER TO
-
-    ENDFUNC
-
-    FUNCTION close
-        IF USED('lemmas')
-            USE IN lemmas
-        endif
-
-*!*            IF FILE('lemmas.dbf')
-*!*                ERASE lemmas.dbf
-*!*                ERASE lemmas.cdx
-*!*            endif
-    ENDFUNC
-
-
-    FUNCTION SearchByWord()
-        m.cAlias = ALIAS()
-        IF LEN(this.lemma) < 29
-            this.lemma = this.lemma + SPACE(30-LEN(this.lemma))
-        endif
-        SELECT lemmas
-        SET ORDER TO lemma
-        SEEK(this.lemma)
-        IF FOUND()
-            IF EMPTY(lemmas.lemma)
-                SELECT (m.cAlias)
-                RETURN this.lemma
-            ELSE
-                SELECT (m.cAlias)
-                return lemmas.lemma
-            endif
-        ELSE
-            RETURN ""
-        ENDIF
-    ENDFUNC
-
-    FUNCTION SearchByWordWithFrequency()
-        IF EMPTY(lemmas.lemma)
-            RETURN ""
-        ENDIF
-
-        m.cAlias = ALIAS()
-        IF LEN(this.lemma) < 29
-            this.lemma = this.lemma + SPACE(30-LEN(this.lemma))
-        endif
-        SELECT lemmas
-        SET ORDER TO lemma
-        SEEK(this.lemma)
-        IF FOUND()
-            SELECT (m.cAlias)
-            return lemmas.lemma
-        ELSE
-            SELECT (m.cAlias)
-            RETURN ""
-        ENDIF
-    ENDFUNC
-
-    FUNCTION SearchByStatus(m.nStatus)
-        m.cAlias = ALIAS()
-        SELECT lemmas
-        SET ORDER TO status
-        SEEK(m.nStatus)
-        IF FOUND()
-            m.cLemma = ALLTRIM(lemmas.lemma) + "  "
-            SELECT (m.cAlias)
-            return m.cLemma
-        ELSE
-            SELECT (m.cAlias)
-            RETURN ""
-        ENDIF
-    ENDFUNC
-
-
-    FUNCTION SetStatus
-*!*            WAIT windows NOWAIT "Устанавливаем Status леммы"
-*!*            SELECT lemmas
-*!*            SET ORDER TO weight
-*!*            m.nStatus = 1000
-*!*            SCAN all
-*!*                m.nStatus = m.nStatus + 1
-*!*                replace lemmas.status WITH m.nStatus
-*!*            ENDscan
-    ENDFUNC
-
-
-    FUNCTION Export
-*!*            WAIT windows NOWAIT "Выгружаем данные lemmas"
-*!*            SELECT lemmas
-*!*            SET ORDER TO weight DESCENDING
-*!*            copy TO lemmas.txt DELIMITED WITH TAB FIELDS lemma, weight
-    ENDFUNC
-
-ENDDEFINE
 
 ******************************
 *  класс _pretext
@@ -804,22 +615,13 @@ DEFINE CLASS _pretext as Custom
         INDEX ON pretext TAG pretext
     ENDFUNC
 
-    FUNCTION close
-        IF USED('pretext')
-            USE IN pretext
-        endif
-*!*            IF FILE('pretext.dbf')
-*!*                ERASE pretext.dbf
-*!*                ERASE pretext.cdx
-*!*            endif
-
-    ENDFUNC
 
     FUNCTION append_data
         IF FILE("pretext.txt")
             SELECT pretext
             ZAP
-            WAIT windows NOWAIT "Добавление данных из файла pretext.txt"
+            ? "Добавление данных из файла pretext.txt"
+            ? TIME()
             APPEND FROM pretext.txt DELIMITED WITH TAB
         endif
     ENDFUNC
@@ -855,17 +657,14 @@ DEFINE CLASS _minus as Custom
         INDEX ON minus TAG minus
     ENDFUNC
 
-    FUNCTION close
-        IF USED('minus')
-            USE IN minus
-        endif
-    ENDFUNC
+
 
     FUNCTION append_data
         IF FILE("minus.txt")
             SELECT minus
             ZAP
-            WAIT windows NOWAIT "Добавление данных из файла minus.txt"
+            ? "Добавление данных из файла minus.txt"
+            ? TIME()
             APPEND FROM minus.txt DELIMITED WITH TAB
         endif
     ENDFUNC

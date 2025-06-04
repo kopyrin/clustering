@@ -109,29 +109,15 @@ IF oClasters.append_data()
                 m.cW   = ""
                 m.cWes = 0
             ENDIF
-            DO case
-                CASE m.nCount =1
-                    oClasters.w1     = m.cW
-                    oClasters.l1_max = m.cWes
-                CASE m.nCount =2
-                    oClasters.w2 = m.cW
-                    oClasters.l2_max = m.cWes
-                CASE m.nCount = 3
-                    oClasters.w3 = m.cW
-                    oClasters.l3_max = m.cWes
-                CASE m.nCount = 4
-                    oClasters.w4 = m.cW
-                    oClasters.l4_max = m.cWes
-                CASE m.nCount = 5
-                    oClasters.w5 = m.cW
-                    oClasters.l5_max = m.cWes
-                CASE m.nCount = 6
-                    oClasters.w6 = m.cW
-                    oClasters.l6_max = m.cWes
-                CASE m.nCount = 7
-                    oClasters.w7 = m.cW
-                    oClasters.l7_max = m.cWes
-            ENDCASE
+
+            * имя поля для слова и максимальной частотности
+            m.cWField = "w" + TRANSFORM(m.nCount)
+            m.cLField = "l" + TRANSFORM(m.nCount) + "_max"
+
+            * присваиваем значения через макроподстановку
+            oClasters.&m.cWField = m.cW
+            oClasters.&m.cLField = m.cWes
+
             oClasters.wes = oClasters.wes+CHR(9)+m.cW +CHR(9)+IIF(m.cWes>0,ALLTRIM(STR(m.cWes)),"")
         ENDFOR
         SELECT clasters
@@ -457,31 +443,14 @@ DEFINE CLASS _clasters as Custom
                                 LOOP
                             ENDIF
 
-                            DO case
-                                CASE m.nCount = 1
-                                    oClasters.w1 = m.cWord
-                                    oClasters.l1 = oDicLemms.SearchByWord(m.cWord)
-                                CASE m.nCount = 2
-                                    oClasters.w2 = m.cWord
-                                    oClasters.l2 = oDicLemms.SearchByWord(m.cWord)
-                                CASE m.nCount = 3
-                                    oClasters.w3 = m.cWord
-                                    oClasters.l3 = oDicLemms.SearchByWord(m.cWord)
-                                CASE m.nCount = 4
-                                    oClasters.w4 = m.cWord
-                                    oClasters.l4 = oDicLemms.SearchByWord(m.cWord)
-                                CASE m.nCount = 5
-                                    oClasters.w5 = m.cWord
-                                    oClasters.l5 = oDicLemms.SearchByWord(m.cWord)
-                                CASE m.nCount = 6
-                                    oClasters.w6 = m.cWord
-                                    oClasters.l6 = oDicLemms.SearchByWord(m.cWord)
-                                CASE m.nCount = 7
-                                    oClasters.w7 = m.cWord
-                                    oClasters.l7 = oDicLemms.SearchByWord(m.cWord)
-                                OTHERWISE 
-                                    ? "Вышли за 7 слов в ключе "
-                            endcase
+                            IF m.nCount <= 7
+                                m.cWField = "w" + TRANSFORM(m.nCount)
+                                m.cLField = "l" + TRANSFORM(m.nCount)
+                                oClasters.&m.cWField = m.cWord
+                                oClasters.&m.cLField = oDicLemms.SearchByWord(m.cWord)
+                            ELSE
+                                ? "Вышли за 7 слов в ключе "
+                            ENDIF
                         ENDIF
                     ENDFOR
                     IF NOT m.lZapret
@@ -602,92 +571,60 @@ DEFINE CLASS _words as Custom
     ENDFUNC
 
 
+
+ENDDEFINE
+
+
+******************************
+*  базовый класс для списков слов
+******************************
+DEFINE CLASS _wordlist AS Custom
+    field_name = ""
+    file_name  = ""
+
+    FUNCTION open
+        LOCAL cCreate, cIndex
+        cCreate = "CREATE TABLE " + this.field_name + " FREE (" + this.field_name + " C(30))"
+        &cCreate
+        cIndex = "INDEX ON " + this.field_name + " TAG " + this.field_name
+        &cIndex
+    ENDFUNC
+
+    FUNCTION append_data
+        IF FILE(this.file_name)
+            SELECT (this.field_name)
+            ZAP
+            ? "Добавление данных из файла " + this.file_name
+            ? TIME()
+            APPEND FROM (this.file_name) DELIMITED WITH TAB
+        ENDIF
+    ENDFUNC
+
+    FUNCTION seek_word(tcWord)
+        IF EMPTY(tcWord)
+            RETURN .f.
+        ENDIF
+        IF LEN(tcWord) < 29
+            tcWord = tcWord + SPACE(30-LEN(tcWord))
+        endif
+        SELECT (this.field_name)
+        RETURN SEEK(tcWord)
+    ENDFUNC
 ENDDEFINE
 
 
 ******************************
 *  класс _pretext
 ******************************
-DEFINE CLASS _pretext as Custom
-    FUNCTION open
-        CREATE TABLE pretext FREE  ;
-               (pretext C(30))
-        INDEX ON pretext TAG pretext
-    ENDFUNC
-
-
-    FUNCTION append_data
-        IF FILE("pretext.txt")
-            SELECT pretext
-            ZAP
-            ? "Добавление данных из файла pretext.txt"
-            ? TIME()
-            APPEND FROM pretext.txt DELIMITED WITH TAB
-        endif
-    ENDFUNC
-
-    *************************************
-    * поиск в списке слов Pretext
-    *************************************
-    FUNCTION seek_word(m.cPretext)
-        IF EMPTY(m.cPretext)
-            RETURN .f.
-        ENDIF
-        IF LEN(m.cPretext) < 30
-            m.cPretext = m.cPretext + SPACE(30-LEN(m.cPretext))
-        endif
-        SELECT pretext
-        IF SEEK(m.cPretext)
-            RETURN .t.
-        ELSE
-            RETURN .f.
-        ENDIF
-    endfunc
-
-
+DEFINE CLASS _pretext AS _wordlist
+    field_name = "pretext"
+    file_name  = "pretext.txt"
 ENDDEFINE
 
 ******************************
 *  класс _minus
 ******************************
-DEFINE CLASS _minus as Custom
-    FUNCTION open
-        CREATE TABLE minus FREE  ;
-               (minus C(30))
-        INDEX ON minus TAG minus
-    ENDFUNC
-
-
-
-    FUNCTION append_data
-        IF FILE("minus.txt")
-            SELECT minus
-            ZAP
-            ? "Добавление данных из файла minus.txt"
-            ? TIME()
-            APPEND FROM minus.txt DELIMITED WITH TAB
-        endif
-    ENDFUNC
-
-    *************************************
-    * поиск в списке слов Minus
-    *************************************
-    FUNCTION seek_word(m.cMinus)
-        IF EMPTY(m.cMinus)
-            RETURN .f.
-        ENDIF
-        IF LEN(m.cMinus) < 30
-            m.cMinus = m.cMinus + SPACE(30-LEN(m.cMinus))
-        endif
-        SELECT minus
-        IF SEEK(m.cMinus)
-            RETURN .t.
-        ELSE
-            RETURN .f.
-        ENDIF
-    endfunc
-
-
+DEFINE CLASS _minus AS _wordlist
+    field_name = "minus"
+    file_name  = "minus.txt"
 ENDDEFINE
-
-

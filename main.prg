@@ -284,7 +284,7 @@ DEFINE CLASS _diclemms as Custom
     ENDFUNC
 
     FUNCTION SearchByWord(m.cWord)
-        IF LEN(m.cWord) < 29
+        IF LEN(m.cWord) < 30
             m.cWord = m.cWord + SPACE(30-LEN(m.cWord))
         ENDIF
         
@@ -633,7 +633,7 @@ DEFINE CLASS _pretext as Custom
         IF EMPTY(m.cPretext)
             RETURN .f.
         ENDIF
-        IF LEN(m.cPretext) < 29
+        IF LEN(m.cPretext) < 30
             m.cPretext = m.cPretext + SPACE(30-LEN(m.cPretext))
         endif
         SELECT pretext
@@ -676,7 +676,7 @@ DEFINE CLASS _minus as Custom
         IF EMPTY(m.cMinus)
             RETURN .f.
         ENDIF
-        IF LEN(m.cMinus) < 29
+        IF LEN(m.cMinus) < 30
             m.cMinus = m.cMinus + SPACE(30-LEN(m.cMinus))
         endif
         SELECT minus

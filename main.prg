@@ -512,7 +512,7 @@ ENDDEFINE
 ******************************
 DEFINE CLASS _words as Custom
     words      = ""
-    frecuency  = 0
+    frequency  = 0
     COUNT      = 0
     lemma      = ""
     count_lemm = 0

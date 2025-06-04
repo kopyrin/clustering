@@ -84,10 +84,10 @@ IF oClasters.append_data()
                 LOOP
             ENDIF
             SELECT words
-            IF SEEK(m.cWords)
+            IF SEEK(cWords)
                 aStatus[countStatus] = STR(words.frequency) + words.lemma
             endif
-        ENDFOR 
+        ENDFOR
         ASORT(aStatus,1,ALEN(aStatus),1)
         * удаляю дубликаты слов в строке
         m.nStatus = aStatus[1]

@@ -84,10 +84,10 @@ IF oClasters.append_data()
                 LOOP
             ENDIF
             SELECT words
-            IF SEEK(m.cWords)
+            IF SEEK(cWords)
                 aStatus[countStatus] = STR(words.frequency) + words.lemma
             endif
-        ENDFOR 
+        ENDFOR
         ASORT(aStatus,1,ALEN(aStatus),1)
         * удаляю дубликаты слов в строке
         m.nStatus = aStatus[1]
@@ -270,7 +270,7 @@ DEFINE CLASS _diclemms as Custom
     ENDFUNC
 
     FUNCTION SearchByWord(m.cWord)
-        IF LEN(m.cWord) < 29
+        IF LEN(m.cWord) < 30
             m.cWord = m.cWord + SPACE(30-LEN(m.cWord))
         ENDIF
         
@@ -481,7 +481,7 @@ ENDDEFINE
 ******************************
 DEFINE CLASS _words as Custom
     words      = ""
-    frecuency  = 0
+    frequency  = 0
     COUNT      = 0
     lemma      = ""
     count_lemm = 0
@@ -571,6 +571,7 @@ DEFINE CLASS _words as Custom
     ENDFUNC
 
 
+
 ENDDEFINE
 
 
@@ -627,5 +628,3 @@ DEFINE CLASS _minus AS _wordlist
     field_name = "minus"
     file_name  = "minus.txt"
 ENDDEFINE
-
-
